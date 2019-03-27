@@ -42,6 +42,10 @@ var (
 	rxFaviconSize          = regexp.MustCompile(`(?i)(\d+)x(\d+)`)
 )
 
+var (
+	imageExtensions = []string{".png", ".jpg", ".bmp", ".jpeg", ".gif"}
+)
+
 // Constants that used by readability.
 var (
 	divToPElems                  = []string{"a", "blockquote", "dl", "div", "img", "ol", "p", "pre", "table", "ul", "select"}
@@ -71,16 +75,17 @@ type parseAttempt struct {
 
 // Article is the final readable content.
 type Article struct {
-	Title       string
-	Byline      string
-	Node        *html.Node
-	Content     string
-	TextContent string
-	Length      int
-	Excerpt     string
-	SiteName    string
-	Image       string
-	Favicon     string
+	Title         string
+	Byline        string
+	Node          *html.Node
+	Content       string
+	TextContent   string
+	Length        int
+	Excerpt       string
+	SiteName      string
+	Image         string
+	Favicon       string
+	ContentImages []string
 }
 
 // Parser is the parser that parses the page to get the readable content.
@@ -1665,6 +1670,7 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 	finalTextContent := ""
 	articleContent := ps.grabArticle()
 	var readableNode *html.Node
+	var images []string
 
 	if articleContent != nil {
 		ps.postProcessContent(articleContent)
@@ -1683,6 +1689,14 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 		finalHTMLContent = innerHTML(articleContent)
 		finalTextContent = textContent(articleContent)
 		finalTextContent = strings.TrimSpace(finalTextContent)
+
+		imageNodes := getElementsByTagName(articleContent, "img")
+		for _, node := range imageNodes {
+			srcAttr := ps.getValidImageSource(getAttribute(node, "src"))
+			if srcAttr != "" {
+				images = append(images, srcAttr)
+			}
+		}
 	}
 
 	finalByline := metadata["byline"]
@@ -1691,16 +1705,17 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 	}
 
 	return Article{
-		Title:       ps.articleTitle,
-		Byline:      finalByline,
-		Node:        readableNode,
-		Content:     finalHTMLContent,
-		TextContent: finalTextContent,
-		Length:      len(finalTextContent),
-		Excerpt:     metadata["excerpt"],
-		SiteName:    metadata["siteName"],
-		Image:       metadata["image"],
-		Favicon:     metadata["favicon"],
+		Title:         ps.articleTitle,
+		Byline:        finalByline,
+		Node:          readableNode,
+		Content:       finalHTMLContent,
+		TextContent:   finalTextContent,
+		Length:        len(finalTextContent),
+		Excerpt:       metadata["excerpt"],
+		SiteName:      metadata["siteName"],
+		Image:         metadata["image"],
+		Favicon:       metadata["favicon"],
+		ContentImages: images,
 	}, nil
 }
 
@@ -1895,4 +1910,20 @@ func (ps *Parser) clearReadabilityAttr(node *html.Node) {
 	for child := firstElementChild(node); child != nil; child = nextElementSibling(child) {
 		ps.clearReadabilityAttr(child)
 	}
+}
+
+func (ps *Parser) getValidImageSource(originalUrl string) string {
+	if originalUrl == "" {
+		return ""
+	}
+	parsedUrl, err := nurl.Parse(originalUrl)
+	if err != nil {
+		return ""
+	}
+	for _, extension := range imageExtensions {
+		if strings.Contains(parsedUrl.Path, extension) {
+			return originalUrl
+		}
+	}
+	return ""
 }

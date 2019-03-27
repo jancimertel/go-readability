@@ -1,3 +1,11 @@
+Custom fork
+===
+This fork is meant to be used for custom projects, so additions to forked code is probably not what you want.
+In general i need this package to retrieve more specific elements from html page.
+
+kudos to original (golang) maintainers at [repo](github.com/go-shiori/go-readability) and ofc [Readability.js](https://github.com/mozilla/readability)
+ 
+
 Go-Readability
 ===
 
