@@ -1,8 +1,11 @@
 package readability
 
 import (
+	"bytes"
 	"fmt"
+	"golang.org/x/net/html/charset"
 	"io"
+	"io/ioutil"
 	"math"
 	nurl "net/url"
 	"regexp"
@@ -1221,6 +1224,17 @@ func (ps *Parser) getArticleMetadata() map[string]string {
 	}
 }
 
+func (ps *Parser) getCharset() string {
+	metaElements := getElementsByTagName(ps.doc, "meta")
+	for i := 0; i < len(metaElements); i++ {
+		charsetProp := getAttribute(metaElements[i], "charset")
+		if charsetProp != "" {
+			return charsetProp
+		}
+	}
+	return ""
+}
+
 // removeScripts removes script tags from the document.
 func (ps *Parser) removeScripts(doc *html.Node) {
 	scripts := getElementsByTagName(doc, "script")
@@ -1622,6 +1636,12 @@ func (ps *Parser) isProbablyVisible(node *html.Node) bool {
 
 // Parse parses input and find the main readable content.
 func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
+	respByte, readErr := ioutil.ReadAll(input)
+	if readErr != nil {
+		return Article{}, readErr
+	}
+	inputBuffer := ps.makeUtf8Buffer(respByte)
+
 	// Reset parser data
 	ps.articleTitle = ""
 	ps.articleByline = ""
@@ -1642,7 +1662,7 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 	}
 
 	// Parse input
-	ps.doc, err = html.Parse(input)
+	ps.doc, err = html.Parse(inputBuffer)
 	if err != nil {
 		return Article{}, fmt.Errorf("failed to parse input: %v", err)
 	}
@@ -1926,4 +1946,19 @@ func (ps *Parser) getValidImageSource(originalUrl string) string {
 		}
 	}
 	return ""
+}
+
+func (ps *Parser) makeUtf8Buffer(in []byte) io.Reader {
+	re := regexp.MustCompile(`<meta.*?charset="([^"']+)"`)
+	out := re.FindSubmatch(in)
+
+	inputReader := bytes.NewReader(in)
+	if len(out) > 1 {
+		reader, charsetErr := charset.NewReaderLabel(string(out[1]), inputReader)
+		if charsetErr != nil {
+			return inputReader
+		}
+		return reader
+	}
+	return inputReader
 }
