@@ -47,7 +47,9 @@ var (
 
 var (
 	imageExtensions = []string{".png", ".jpg", ".bmp", ".jpeg", ".gif"}
+	allowedVideoDomains = []string{"www.youtube.com", "youtube.com"}
 )
+
 
 // Constants that used by readability.
 var (
@@ -89,6 +91,7 @@ type Article struct {
 	Image         string
 	Favicon       string
 	ContentImages []string
+	ContentVideos []string
 }
 
 // Parser is the parser that parses the page to get the readable content.
@@ -1691,6 +1694,7 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 	articleContent := ps.grabArticle()
 	var readableNode *html.Node
 	var images []string
+	var videos []string
 
 	if articleContent != nil {
 		ps.postProcessContent(articleContent)
@@ -1717,6 +1721,25 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 				images = append(images, srcAttr)
 			}
 		}
+
+		iframeNodes := getElementsByTagName(articleContent, "iframe")
+		for _, node := range iframeNodes {
+			srcAttr := ps.getValidVideoSource(getAttribute(node, "src"))
+			if srcAttr != "" {
+				videos = append(videos, srcAttr)
+			}
+		}
+
+		videoNodes := getElementsByTagName(articleContent, "video")
+		for _, node := range videoNodes {
+			srcAttr := ps.getValidVideoSource(getAttribute(node, "src"))
+			if srcAttr != "" {
+				videos = append(videos, srcAttr)
+			}
+		}
+
+		images = makeUniqueSlice(images)
+		videos = makeUniqueSlice(videos)
 	}
 
 	finalByline := metadata["byline"]
@@ -1736,6 +1759,7 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 		Image:         metadata["image"],
 		Favicon:       metadata["favicon"],
 		ContentImages: images,
+		ContentVideos: videos,
 	}, nil
 }
 
@@ -1932,6 +1956,22 @@ func (ps *Parser) clearReadabilityAttr(node *html.Node) {
 	}
 }
 
+func (ps *Parser) getValidVideoSource(originalUrl string) string {
+	if originalUrl == "" {
+		return ""
+	}
+	parsedUrl, err := nurl.Parse(originalUrl)
+	if err != nil {
+		return ""
+	}
+	for _, videoDomain := range allowedVideoDomains {
+		if strings.Contains(parsedUrl.Hostname(), videoDomain) {
+			return originalUrl
+		}
+	}
+	return ""
+}
+
 func (ps *Parser) getValidImageSource(originalUrl string) string {
 	if originalUrl == "" {
 		return ""
@@ -1961,4 +2001,17 @@ func (ps *Parser) makeUtf8Buffer(in []byte) io.Reader {
 		return reader
 	}
 	return inputReader
+}
+
+func makeUniqueSlice(input []string) (out []string) {
+	alreadyStoredMap := make(map[string]bool)
+
+	for _, val := range input {
+		if _, ok := alreadyStoredMap[val]; !ok {
+			alreadyStoredMap[val] = true
+			out = append(out, val)
+		}
+	}
+
+	return out
 }
