@@ -41,12 +41,14 @@ func findNodeBySelector(doc *html.Node, selector string) []*html.Node {
 		isIdSelector := string(selector[0]) == "#"
 
 		if node.Type == html.ElementNode {
-			if isTagSelector {
-				if selector == "*" || node.Data == selector {
+			if selector == "*" || node.Data == selector {
+				results = append(results, node)
+			} else if isTagSelector {
+				if tagName(node) == selector {
 					results = append(results, node)
 				}
 			} else if isClassSelector {
-				if "." + className(node) == selector {
+				if "."+className(node) == selector {
 					results = append(results, node)
 				}
 			} else if isIdSelector {
