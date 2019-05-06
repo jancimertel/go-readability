@@ -31,6 +31,43 @@ func getElementsByTagName(doc *html.Node, tagName string) []*html.Node {
 	return results
 }
 
+func findNodeBySelector(doc *html.Node, selector string) []*html.Node {
+	var results []*html.Node
+	var finder func(*html.Node)
+
+	finder = func(node *html.Node) {
+		isTagSelector := string(selector[0]) != "." && string(selector[0]) != "#"
+		isClassSelector := string(selector[0]) == "."
+		isIdSelector := string(selector[0]) == "#"
+
+		if node.Type == html.ElementNode {
+			if isTagSelector {
+				if selector == "*" || node.Data == selector {
+					results = append(results, node)
+				}
+			} else if isClassSelector {
+				if "." + className(node) == selector {
+					results = append(results, node)
+				}
+			} else if isIdSelector {
+				if ("#" + getAttribute(node, "id")) == selector {
+					results = append(results, node)
+				}
+			}
+		}
+
+		for child := node.FirstChild; child != nil; child = child.NextSibling {
+			finder(child)
+		}
+	}
+
+	for child := doc.FirstChild; child != nil; child = child.NextSibling {
+		finder(child)
+	}
+
+	return results
+}
+
 // createElement creates a new ElementNode with specified tag.
 func createElement(tagName string) *html.Node {
 	return &html.Node{

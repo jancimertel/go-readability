@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/net/html"
 )
@@ -120,10 +121,17 @@ type Parser struct {
 	articleSiteName string
 	attempts        []parseAttempt
 	flags           flags
+
+	config 			*ReadabilityConfig
+}
+
+type ReadabilityConfig struct {
+	Timeout             time.Duration
+	UndesirableElements []string
 }
 
 // NewParser returns new Parser which set up with default value.
-func NewParser() Parser {
+func NewParser(config *ReadabilityConfig) Parser {
 	return Parser{
 		MaxElemsToParse:   0,
 		NTopCandidates:    5,
@@ -131,6 +139,7 @@ func NewParser() Parser {
 		ClassesToPreserve: []string{"page"},
 		TagsToScore:       []string{"section", "h2", "h3", "h4", "h5", "h6", "p", "td", "pre"},
 		Debug:             false,
+		config:			   config,
 	}
 }
 
@@ -370,6 +379,15 @@ func (ps *Parser) prepDocument() {
 	}
 
 	ps.replaceNodeTags(getElementsByTagName(doc, "font"), "span")
+}
+
+func (ps *Parser) removeUndesirables() {
+	var undesirableNodes []*html.Node
+	for _, selector := range ps.config.UndesirableElements {
+		fmt.Println("testing", selector)
+		undesirableNodes = append(undesirableNodes, findNodeBySelector(ps.doc, selector)...)
+	}
+	ps.removeNodes(undesirableNodes, nil)
 }
 
 // nextElement finds the next element, starting from the given node, and
@@ -1683,6 +1701,8 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 
 	// Prepares the HTML document
 	ps.prepDocument()
+
+	ps.removeUndesirables()
 
 	// Fetch metadata
 	metadata := ps.getArticleMetadata()
