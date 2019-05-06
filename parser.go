@@ -384,7 +384,6 @@ func (ps *Parser) prepDocument() {
 func (ps *Parser) removeUndesirables() {
 	var undesirableNodes []*html.Node
 	for _, selector := range ps.config.UndesirableElements {
-		fmt.Println("testing", selector)
 		undesirableNodes = append(undesirableNodes, findNodeBySelector(ps.doc, selector)...)
 	}
 	ps.removeNodes(undesirableNodes, nil)
