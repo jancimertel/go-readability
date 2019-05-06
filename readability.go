@@ -63,6 +63,11 @@ func FromURL(pageURL string, timeout time.Duration) (Article, error) {
 	return parser.Parse(&buffer, pageURL)
 }
 
+func FromReaderWithConfig(input io.Reader, pageURL string, config *ReadabilityConfig) (Article, error) {
+	parser := NewParser(config)
+	return parser.Parse(input, pageURL)
+}
+
 func FromURLWithConfig(pageURL string, config *ReadabilityConfig) (Article, error) {
 	// Make sure URL is valid
 	_, err := nurl.ParseRequestURI(pageURL)

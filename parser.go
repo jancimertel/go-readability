@@ -132,6 +132,10 @@ type ReadabilityConfig struct {
 
 // NewParser returns new Parser which set up with default value.
 func NewParser(config *ReadabilityConfig) Parser {
+	usedConfig := config
+	if usedConfig == nil {
+		usedConfig = &ReadabilityConfig{}
+	}
 	return Parser{
 		MaxElemsToParse:   0,
 		NTopCandidates:    5,
@@ -139,7 +143,7 @@ func NewParser(config *ReadabilityConfig) Parser {
 		ClassesToPreserve: []string{"page"},
 		TagsToScore:       []string{"section", "h2", "h3", "h4", "h5", "h6", "p", "td", "pre"},
 		Debug:             false,
-		config:			   config,
+		config:			   usedConfig,
 	}
 }
 
