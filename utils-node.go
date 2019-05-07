@@ -48,8 +48,12 @@ func findNodeBySelector(doc *html.Node, selector string) []*html.Node {
 					results = append(results, node)
 				}
 			} else if isClassSelector {
-				if "."+className(node) == selector {
-					results = append(results, node)
+				classAttr := strings.Split(className(node), " ")
+				for _, singleClass := range classAttr {
+					if "." + strings.Trim(singleClass, " ") == selector {
+						results = append(results, node)
+						break
+					}
 				}
 			} else if isIdSelector {
 				if ("#" + getAttribute(node, "id")) == selector {
