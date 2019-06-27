@@ -47,10 +47,9 @@ var (
 )
 
 var (
-	imageExtensions = []string{".png", ".jpg", ".bmp", ".jpeg", ".gif"}
+	imageExtensions     = []string{".png", ".jpg", ".bmp", ".jpeg", ".gif"}
 	allowedVideoDomains = []string{"www.youtube.com", "youtube.com"}
 )
-
 
 // Constants that used by readability.
 var (
@@ -122,7 +121,7 @@ type Parser struct {
 	attempts        []parseAttempt
 	flags           flags
 
-	config 			*ReadabilityConfig
+	config *ReadabilityConfig
 }
 
 type ReadabilityConfig struct {
@@ -143,7 +142,7 @@ func NewParser(config *ReadabilityConfig) Parser {
 		ClassesToPreserve: []string{"page"},
 		TagsToScore:       []string{"section", "h2", "h3", "h4", "h5", "h6", "p", "td", "pre"},
 		Debug:             false,
-		config:			   usedConfig,
+		config:            usedConfig,
 	}
 }
 
@@ -1796,7 +1795,7 @@ func (ps *Parser) IsReadable(input io.Reader) bool {
 		return false
 	}
 
-	// Get <p> and <pre> nodes.
+	// GetSymbolsFromTag <p> and <pre> nodes.
 	// Also get <div> nodes which have <br> node(s) and append
 	// them into the `nodes` variable.
 	// Some articles' DOM structures might look like :
