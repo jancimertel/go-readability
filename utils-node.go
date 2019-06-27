@@ -50,7 +50,7 @@ func findNodeBySelector(doc *html.Node, selector string) []*html.Node {
 			} else if isClassSelector {
 				classAttr := strings.Split(className(node), " ")
 				for _, singleClass := range classAttr {
-					if "." + strings.Trim(singleClass, " ") == selector {
+					if "."+strings.Trim(singleClass, " ") == selector {
 						results = append(results, node)
 						break
 					}
