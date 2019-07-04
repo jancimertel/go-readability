@@ -51,7 +51,7 @@ var (
 
 var (
 	imageExtensions     = []string{".png", ".jpg", ".bmp", ".jpeg", ".gif"}
-	allowedVideoDomains = []string{"www.youtube.com", "youtube.com"}
+	allowedVideoDomains = []string{"www.youtube.com", "youtube.com", "www.youtu.be", "youtu.be"}
 )
 
 // Constants that used by readability.
@@ -93,6 +93,7 @@ type Article struct {
 	SiteName      string
 	Image         string
 	Favicon       string
+	ContentLinks  []string
 	ContentImages []string
 	ContentVideos []string
 }
@@ -1768,8 +1769,13 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 	finalTextContent := ""
 	articleContent := ps.grabArticle()
 	var readableNode *html.Node
+	var links []string
 	var images []string
 	var videos []string
+
+	if metadata["image"] != "" {
+		images = append(images, metadata["image"])
+	}
 
 	if articleContent != nil {
 		ps.postProcessContent(articleContent)
@@ -1788,6 +1794,14 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 		finalHTMLContent = innerHTML(articleContent)
 		finalTextContent = textContent(articleContent)
 		finalTextContent = strings.TrimSpace(finalTextContent)
+
+		linkNodes := getElementsByTagName(articleContent, "a")
+		for _, node := range linkNodes {
+			srcAttr := ps.getValidLinkSource(getAttribute(node, "href"))
+			if srcAttr != "" {
+				links = append(links, srcAttr)
+			}
+		}
 
 		imageNodes := getElementsByTagName(articleContent, "img")
 		for _, node := range imageNodes {
@@ -1813,6 +1827,7 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 			}
 		}
 
+		links = makeUniqueSlice(links)
 		images = makeUniqueSlice(images)
 		videos = makeUniqueSlice(videos)
 	}
@@ -1838,6 +1853,7 @@ func (ps *Parser) Parse(input io.Reader, pageURL string) (Article, error) {
 		SiteName:      metadata["siteName"],
 		Image:         metadata["image"],
 		Favicon:       metadata["favicon"],
+		ContentLinks:  links,
 		ContentImages: images,
 		ContentVideos: videos,
 	}, nil
@@ -2050,6 +2066,16 @@ func (ps *Parser) getValidVideoSource(originalUrl string) string {
 		}
 	}
 	return ""
+}
+
+func (ps *Parser) getValidLinkSource(originalUrl string) string {
+	if originalUrl == "" {
+		return ""
+	}
+	if strings.HasPrefix(originalUrl, "#") {
+		return ""
+	}
+	return originalUrl
 }
 
 func (ps *Parser) getValidImageSource(originalUrl string) string {
